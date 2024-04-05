@@ -1,0 +1,121 @@
+kind: Environment
+name: preview
+type: primary
+urlHandle: s72hye
+components:
+    -
+        kind: Application
+        name: appgateway
+        gitRepo: 'https://github.com/JeromeNL/avans-devops-2324-joramthieme.git'
+        gitBranch: main
+        gitApplicationPath: /
+        dockerCompose:
+            build:
+                context: .
+                dockerfile: ./appgateway-service/Dockerfile
+            environment:
+                CH_ORDER: order
+                CH_RETURN: return
+                CH_UPDATE: update
+                MONGO_URL: 'mongodb://mongo-database:27017'
+                RABBITMQ_URL: 'amqp://user:password@rabbitmq'
+            ports:
+                - '3005:3005'
+        hosts:
+            -
+                hostname: 'appgateway-{{ env.base_domain }}'
+                path: /
+                servicePort: 3005
+    -
+        kind: Application
+        name: grafana
+        gitRepo: 'https://github.com/JeromeNL/avans-devops-2324-joramthieme.git'
+        gitBranch: main
+        gitApplicationPath: grafana
+        dockerCompose:
+            build:
+                context: ./grafana
+                dockerfile: Dockerfile
+            ports:
+                - '3000:3000'
+        hosts:
+            -
+                hostname: 'grafana-{{ env.base_domain }}'
+                path: /
+                servicePort: 3000
+    -
+        kind: Database
+        name: mongo-database
+        dockerCompose:
+            image: mongo
+            ports:
+                - '27017:27017'
+    -
+        kind: Database
+        name: mongodb-exporter
+        dockerCompose:
+            environment:
+                MONGODB_URI: 'mongodb://mongo-database:27017'
+            image: 'bitnami/mongodb-exporter:latest'
+            ports:
+                - '9216:9216'
+    -
+        kind: Application
+        name: order
+        gitRepo: 'https://github.com/JeromeNL/avans-devops-2324-joramthieme.git'
+        gitBranch: main
+        gitApplicationPath: /
+        dockerCompose:
+            build:
+                context: .
+                dockerfile: ./order-service/Dockerfile
+            environment:
+                CH_ORDER: order
+                CH_RETURN: return
+                CH_UPDATE: update
+                MONGO_URL: 'mongodb://mongo-database:27017'
+                RABBITMQ_URL: 'amqp://user:password@rabbitmq'
+    -
+        kind: Service
+        name: prometheus
+        dockerCompose:
+            image: prom/prometheus
+            ports:
+                - '9090:9090'
+        hosts:
+            -
+                hostname: 'prometheus-{{ env.base_domain }}'
+                path: /
+                servicePort: 9090
+    -
+        kind: Service
+        name: rabbitmq
+        dockerCompose:
+            environment:
+                RABBITMQ_DEFAULT_PASS: password
+                RABBITMQ_DEFAULT_USER: user
+            image: 'rabbitmq:3-management'
+            ports:
+                - '5672:5672'
+                - '15672:15672'
+        hosts:
+            -
+                hostname: 'rabbitmq-{{ env.base_domain }}'
+                path: /
+                servicePort: 5672
+    -
+        kind: Application
+        name: return
+        gitRepo: 'https://github.com/JeromeNL/avans-devops-2324-joramthieme.git'
+        gitBranch: main
+        gitApplicationPath: /
+        dockerCompose:
+            build:
+                context: .
+                dockerfile: ./return-service/Dockerfile
+            environment:
+                CH_ORDER: order
+                CH_RETURN: return
+                CH_UPDATE: update
+                MONGO_URL: 'mongodb://mongo-database:27017'
+                RABBITMQ_URL: 'amqp://user:password@rabbitmq'

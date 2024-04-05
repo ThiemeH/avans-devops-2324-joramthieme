@@ -1,0 +1,89 @@
+version: '3.8'
+
+networks:
+    appnetwork:
+        driver: bridge
+
+x-service-config: &service-config
+    networks:
+        - appnetwork
+    environment:
+        - RABBITMQ_URL=amqp://user:password@rabbitmq
+        - MONGO_URL=mongodb://mongo-database:27017
+        - CH_RETURN=return
+        - CH_ORDER=order
+        - CH_UPDATE=update
+
+services:
+    appgateway:
+        <<: *service-config
+        build:
+            context: .
+            dockerfile: ./appgateway-service/Dockerfile
+        ports:
+            - '3005:3005'
+
+    order:
+        <<: *service-config
+        build:
+            context: .
+            dockerfile: ./order-service/Dockerfile
+
+    return:
+        <<: *service-config
+        build:
+            context: .
+            dockerfile: ./return-service/Dockerfile
+
+    # RabbitMQ service
+    rabbitmq:
+        image: 'rabbitmq:3-management'
+        networks:
+            - appnetwork
+        ports:
+            - '15672:15672' # Web management console port
+            - '5672:5672' # AMQP protocol port
+        environment:
+            - RABBITMQ_DEFAULT_USER=user
+            - RABBITMQ_DEFAULT_PASS=password
+
+    # MongoDB service
+    mongo-database:
+        image: mongo
+        networks:
+            - appnetwork
+        ports:
+            - '27017:27017'
+
+     # Exports for Prometheus
+    mongodb-exporter:
+        image: bitnami/mongodb-exporter:latest
+        networks:
+            - appnetwork
+        environment:
+            - MONGODB_URI=mongodb://mongo-database:27017
+        ports:
+            - '9216:9216'
+        depends_on:
+            - mongo-database
+
+    prometheus:
+        image: prom/prometheus
+        networks:
+            - appnetwork
+        volumes:
+            - ./prometheus.yml:/etc/prometheus/prometheus.yml
+        ports:
+            - "9090:9090"
+        depends_on:
+            - mongodb-exporter
+
+    grafana:
+        networks:
+            - appnetwork
+        build: ./grafana
+        ports:
+        - "3000:3000"
+
+
+
