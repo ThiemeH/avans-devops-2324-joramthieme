@@ -10,7 +10,7 @@ permissions:
 jobs:
   load-artifact-from-reusable:
     name: Load artifact values
-    uses: ThiemeH/avans-devops-2324-joramthieme/.github/workflows/load-artifact.yml@v2
+    uses: ThiemeH/avans-devops-2324-joramthieme/blob/main/.github/workflows/load-artifact.yml
     with:
       workflow_run_id: ${{ github.event.workflow_run.id }}
 
